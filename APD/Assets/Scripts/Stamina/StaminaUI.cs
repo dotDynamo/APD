@@ -15,7 +15,7 @@ public class StaminaUI : MonoBehaviour
 
      void UpdateUI(float newStaminaValue)
     {
-        textValue = newStaminaValue.ToString();
+        textValue = newStaminaValue.ToString("00.00");
         text.text = textValue;    
     }
 
