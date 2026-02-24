@@ -1,27 +1,38 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class DummyStaminaInput : MonoBehaviour
 {
-    public StaminaComponent stamina;
+    public IConsumable stamina;
+    private DummyInputActions inputActions;
     public float spendAmount = 10f;
     public float multiplier = 1f;
 
     void Start()
     {
-        stamina.setDrainMultiplier(multiplier);
+        stamina.SetDrainMultiplier(multiplier);
+    }
+    void Awake()
+    {
+        inputActions = new DummyInputActions();
+        inputActions.Player.Spend.performed += OnSpendPerformed;
     }
 
-    void Update()
+    void OnEnable()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
+        inputActions.Enable();
+    }
+
+    void OnDisable()
+    {
+        inputActions.Disable();
+    }
+
+    void OnSpendPerformed(InputAction.CallbackContext context)
+    {
+        if (stamina != null && stamina.CanAfford(spendAmount))
         {
-            if (stamina != null)
-            {
-                if (stamina.CanAfford(spendAmount))
-                {
-                    stamina.Spend(spendAmount);
-                }
-            } 
+            stamina.Spend(spendAmount);
         }
     }
 }

@@ -1,0 +1,35 @@
+{
+    "version": 1,
+    "name": "DummyInputActions",
+    "maps": [
+        {
+            "name": "Player",
+            "id": "a1254cc2-8c1e-4c90-93db-4cdd0be90782",
+            "actions": [
+                {
+                    "name": "Spend",
+                    "type": "Button",
+                    "id": "e8a53039-7d77-4f33-98d4-3429340a20b7",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "3fc47028-3890-4967-955f-d51d1bf8a039",
+                    "path": "<Keyboard>/space",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Spend",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        }
+    ],
+    "controlSchemes": []
+}

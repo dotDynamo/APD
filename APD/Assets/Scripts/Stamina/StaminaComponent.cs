@@ -14,10 +14,6 @@ public class StaminaComponent : MonoBehaviour, IConsumable
     public event Action<float> OnStaminaChanged;
 
     public bool getIsExhausted(){ return isExhausted;}
-    public void setDrainMultiplier(float newDrainMultiplier)
-    {
-        drainMultiplier = newDrainMultiplier;
-    }
 
     public bool CanAfford(float amount)
     {
@@ -36,6 +32,16 @@ public class StaminaComponent : MonoBehaviour, IConsumable
         }
     }
 
+    public void SetDrainMultiplier(float newDrainMultiplier)
+    {
+        drainMultiplier = newDrainMultiplier;
+    }
+
+    public void Recover()
+    {
+        
+    }
+
     void Awake()
     {
         currentStamina =  maxStamina;
@@ -44,12 +50,10 @@ public class StaminaComponent : MonoBehaviour, IConsumable
 
     void Update()
     {
-        if ( currentStamina >= maxStamina)
+        if (!isExhausted)
         {
-            currentStamina = maxStamina;
-            return;
+            currentStamina = Mathf.Clamp(regenerationRate * Time.deltaTime, 0f, maxStamina);
+            OnStaminaChanged?.Invoke(currentStamina);
         }
-        currentStamina += regenerationRate * Time.deltaTime;
-        OnStaminaChanged?.Invoke(currentStamina);
     }
 }
