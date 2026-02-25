@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using System.Collections;
 
 public class StaminaComponent : MonoBehaviour, IConsumable
 {
@@ -7,10 +8,13 @@ public class StaminaComponent : MonoBehaviour, IConsumable
     [SerializeField] private float regenerationRate;
     [SerializeField] private float drainMultiplier = 1f;
     private float currentStamina;
+    private float staminaSpendBuffer = 1;
+    private float recoveryWaitTime = 3f;
     private  bool isExhausted;
+    private bool isConsuming;
 
     public event Action OnStaminaEmpty;
-    //public event Action OnStaminaFullyRecovered;
+    public event Action OnStaminaFullyRecovered;
     public event Action<float> OnStaminaChanged;
 
     public bool getIsExhausted(){ return isExhausted;}
@@ -18,18 +22,19 @@ public class StaminaComponent : MonoBehaviour, IConsumable
     public bool CanAfford(float amount)
     {
         if (isExhausted) { return false; }
-        return amount * drainMultiplier < currentStamina;
+        return amount  < currentStamina + staminaSpendBuffer;
     }
 
     public void Spend(float amount)
     {
-        currentStamina -= amount * drainMultiplier;
+        currentStamina -= amount;
         OnStaminaChanged?.Invoke(currentStamina);
-        if (currentStamina <= 0.5)
-        {
-            isExhausted = true;
-            OnStaminaEmpty?.Invoke();
-        }
+        checkExhaustion();
+    }
+
+    public void ToggleConsume()
+    {
+        isConsuming = !isConsuming;
     }
 
     public void SetDrainMultiplier(float newDrainMultiplier)
@@ -39,9 +44,30 @@ public class StaminaComponent : MonoBehaviour, IConsumable
 
     public void Recover()
     {
-        
+        currentStamina = Mathf.Clamp(currentStamina + regenerationRate * Time.deltaTime, 0f, maxStamina);
+        if (currentStamina == maxStamina) 
+        {
+            OnStaminaFullyRecovered?.Invoke();
+            return;
+        }
+        OnStaminaChanged?.Invoke(currentStamina);
     }
 
+    private void checkExhaustion()
+    {
+        if (currentStamina > 0) return;
+
+        OnStaminaEmpty?.Invoke();
+        currentStamina = 0;
+        StartCoroutine(RecoveryDelay());
+    }
+
+     IEnumerator RecoveryDelay()
+    {
+        isExhausted = true;
+        yield return new WaitForSeconds(recoveryWaitTime);
+        isExhausted = false;
+    }
     void Awake()
     {
         currentStamina =  maxStamina;
@@ -50,10 +76,13 @@ public class StaminaComponent : MonoBehaviour, IConsumable
 
     void Update()
     {
-        if (!isExhausted)
+        if (isConsuming)
         {
-            currentStamina = Mathf.Clamp(regenerationRate * Time.deltaTime, 0f, maxStamina);
-            OnStaminaChanged?.Invoke(currentStamina);
+            Spend(drainMultiplier  * Time.deltaTime);
+        }
+        else if (!isExhausted && currentStamina < maxStamina)
+        {
+            Recover();
         }
     }
 }
