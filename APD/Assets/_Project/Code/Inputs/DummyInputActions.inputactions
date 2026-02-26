@@ -7,15 +7,6 @@
             "id": "a1254cc2-8c1e-4c90-93db-4cdd0be90782",
             "actions": [
                 {
-                    "name": "Spend",
-                    "type": "Button",
-                    "id": "e8a53039-7d77-4f33-98d4-3429340a20b7",
-                    "expectedControlType": "",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": false
-                },
-                {
                     "name": "Move",
                     "type": "Value",
                     "id": "6c0c3714-97c2-4ec4-9bc9-7b88e94cd090",
@@ -23,6 +14,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": true
+                },
+                {
+                    "name": "Spend",
+                    "type": "Button",
+                    "id": "b9b3bfce-e600-433c-bd0b-b544202c441e",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 },
                 {
                     "name": "Look",
@@ -68,20 +68,18 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "Consume",
+                    "type": "Button",
+                    "id": "f6407fc1-9f26-4bad-98fc-cb55f3398e57",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
-                {
-                    "name": "",
-                    "id": "3fc47028-3890-4967-955f-d51d1bf8a039",
-                    "path": "<Keyboard>/space",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "Spend",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
                 {
                     "name": "",
                     "id": "88549044-1133-4ef1-9053-a6928a9f620b",
@@ -211,6 +209,17 @@
                     "processors": "",
                     "groups": "Joystick",
                     "action": "Move",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "d34cbe62-c063-4ed3-84df-14c92bd72f33",
+                    "path": "<Keyboard>/space",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Spend",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -398,6 +407,17 @@
                     "processors": "",
                     "groups": "XR",
                     "action": "Sprint",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "7d06efe6-6b5c-4786-b829-fc8d4949a733",
+                    "path": "<Keyboard>/c",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Consume",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
