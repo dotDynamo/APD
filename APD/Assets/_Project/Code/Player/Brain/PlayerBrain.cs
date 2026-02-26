@@ -7,14 +7,15 @@ namespace _Project.Code.Player.Brain
 {
     [DisallowMultipleComponent]
     [RequireComponent(typeof(PlayerInput))]
-    [RequireComponent(typeof(CharacterMotor))]
+    [RequireComponent(typeof(Rigidbody))]
+    [RequireComponent(typeof(RigidbodyMotor))]
     [RequireComponent(typeof(MovementModule))]
     [RequireComponent(typeof(JumpModule))]
     public sealed class PlayerBrain : MonoBehaviour
     {
         [Header("References")]
         [SerializeField] private PlayerInput playerInput;
-        [SerializeField] private CharacterMotor motor;
+        [SerializeField] private RigidbodyMotor motor;
         [SerializeField] private MovementModule movementModule;
         [SerializeField] private JumpModule jumpModule;
 
@@ -35,7 +36,7 @@ namespace _Project.Code.Player.Brain
         private void Reset()
         {
             playerInput = GetComponent<PlayerInput>();
-            motor = GetComponent<CharacterMotor>();
+            motor = GetComponent<RigidbodyMotor>();
             movementModule = GetComponent<MovementModule>();
             jumpModule = GetComponent<JumpModule>();
         }
@@ -43,20 +44,17 @@ namespace _Project.Code.Player.Brain
         private void Awake()
         {
             if (playerInput == null) playerInput = GetComponent<PlayerInput>();
-            if (motor == null) motor = GetComponent<CharacterMotor>();
+            if (motor == null) motor = GetComponent<RigidbodyMotor>();
             if (movementModule == null) movementModule = GetComponent<MovementModule>();
             if (jumpModule == null) jumpModule = GetComponent<JumpModule>();
 
-            // Asegura mapa correcto
             if (!string.IsNullOrEmpty(playerInput.defaultActionMap))
                 playerInput.SwitchCurrentActionMap(playerInput.defaultActionMap);
             else
                 playerInput.SwitchCurrentActionMap("Player");
 
-            // Asegura actions habilitadas
             playerInput.actions?.Enable();
 
-            // Cache actions
             _moveAction = playerInput.actions.FindAction("Move", throwIfNotFound: false);
             _sprintAction = playerInput.actions.FindAction("Sprint", throwIfNotFound: false);
             _jumpAction = playerInput.actions.FindAction("Jump", throwIfNotFound: false);
@@ -70,8 +68,8 @@ namespace _Project.Code.Player.Brain
         private void OnValidate()
         {
             if (GetComponent<PlayerInput>() == null) gameObject.AddComponent<PlayerInput>();
-            if (GetComponent<CharacterController>() == null) gameObject.AddComponent<CharacterController>();
-            if (GetComponent<CharacterMotor>() == null) gameObject.AddComponent<CharacterMotor>();
+            if (GetComponent<Rigidbody>() == null) gameObject.AddComponent<Rigidbody>();
+            if (GetComponent<RigidbodyMotor>() == null) gameObject.AddComponent<RigidbodyMotor>();
             if (GetComponent<MovementModule>() == null) gameObject.AddComponent<MovementModule>();
             if (GetComponent<JumpModule>() == null) gameObject.AddComponent<JumpModule>();
         }
@@ -79,18 +77,15 @@ namespace _Project.Code.Player.Brain
 
         private void OnEnable()
         {
-            // Cámara fallback
             if (cameraTransform == null && Camera.main != null)
                 cameraTransform = Camera.main.transform;
 
             if (cameraTransform != null)
                 motor.SetCamera(cameraTransform);
 
-            // Habilita módulos
             jumpModule.ModuleEnable();
             movementModule.ModuleEnable();
 
-            // Suscripción directa a acciones (funciona aunque PlayerInput esté en Send Messages)
             if (_moveAction != null)
             {
                 _moveAction.performed += OnMove;
@@ -130,17 +125,22 @@ namespace _Project.Code.Player.Brain
 
         private void Update()
         {
-            // Empuja input a módulos
-            jumpModule.SetJumpPressedThisFrame(_jumpPressedThisFrame);
+            // Only cache input + edge triggers in Update
             movementModule.SetInput(_move, _sprintHeld);
+            jumpModule.SetJumpPressedThisFrame(_jumpPressedThisFrame);
 
-            float dt = Time.deltaTime;
+            // consume edge
+            _jumpPressedThisFrame = false;
+        }
 
-            // Orden: primero vertical, luego Move()
+        private void FixedUpdate()
+        {
+            // Apply movement/jump in FixedUpdate (Rigidbody timebase)
+            float dt = Time.fixedDeltaTime;
+
+            // Order: vertical first, then planar (consistent)
             jumpModule.Tick(dt);
             movementModule.Tick(dt);
-
-            _jumpPressedThisFrame = false;
         }
 
         private void OnMove(InputAction.CallbackContext ctx) => _move = ctx.ReadValue<Vector2>();

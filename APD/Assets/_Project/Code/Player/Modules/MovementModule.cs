@@ -5,15 +5,18 @@ using _Project.Code.Player.Utils;
 namespace _Project.Code.Player.Modules
 {
     [DisallowMultipleComponent]
-    [RequireComponent(typeof(CharacterMotor))]
+    [RequireComponent(typeof(RigidbodyMotor))]
     public sealed class MovementModule : MonoBehaviour, IPlayerModule
     {
         [Header("Movement")]
-        [SerializeField] private float walkSpeed = 4.5f;
-        [SerializeField] private float sprintSpeed = 7.0f;
+        [SerializeField] private float walkSpeed = 10f;
+        [SerializeField] private float sprintSpeed = 33f;
+
+        [Header("Turning")]
+        [Tooltip("Smaller = snappier rotation")]
         [SerializeField] private float rotationSmoothTime = 0.08f;
 
-        private CharacterMotor _motor;
+        private RigidbodyMotor _motor;
 
         private Vector2 _move;
         private bool _sprintHeld;
@@ -32,10 +35,10 @@ namespace _Project.Code.Player.Modules
 
         private void Awake()
         {
-            _motor = GetComponent<CharacterMotor>();
-            if (_motor == null) _motor = gameObject.AddComponent<CharacterMotor>();
+            _motor = GetComponent<RigidbodyMotor>();
         }
 
+        /// <summary>Call from FixedUpdate.</summary>
         public void Tick(float dt)
         {
             if (!_enabled) return;
@@ -49,19 +52,24 @@ namespace _Project.Code.Player.Modules
                 return;
             }
 
-            float targetAngle = Mathf.Atan2(moveDir.x, moveDir.z) * Mathf.Rad2Deg;
-            float angle = Mathf.SmoothDampAngle(
-                transform.eulerAngles.y,
-                targetAngle,
-                ref _turnSmoothVelocity,
-                rotationSmoothTime
-            );
-            transform.rotation = Quaternion.Euler(0f, angle, 0f);
-
             float speed = _sprintHeld ? sprintSpeed : walkSpeed;
-            Vector3 horizontalVelocity = moveDir * (speed * magnitude);
+            Vector3 planarVelocity = moveDir * (speed * magnitude);
 
-            _motor.Move(horizontalVelocity, dt);
+            // Use Rigidbody rotation as the "current yaw" to prevent oscillation/shake
+            float currentYaw = _motor.CurrentRotation.eulerAngles.y;
+            float targetYaw = Mathf.Atan2(moveDir.x, moveDir.z) * Mathf.Rad2Deg;
+
+            float smoothYaw = Mathf.SmoothDampAngle(
+                currentYaw,
+                targetYaw,
+                ref _turnSmoothVelocity,
+                rotationSmoothTime,
+                Mathf.Infinity,
+                dt
+            );
+
+            _motor.SetDesiredRotation(Quaternion.Euler(0f, smoothYaw, 0f));
+            _motor.Move(planarVelocity, dt);
         }
     }
 }

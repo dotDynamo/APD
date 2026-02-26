@@ -5,31 +5,33 @@ using _Project.Code.Player.Utils;
 namespace _Project.Code.Player.Modules
 {
     [DisallowMultipleComponent]
-    [RequireComponent(typeof(CharacterMotor))]
+    [RequireComponent(typeof(RigidbodyMotor))]
     public sealed class JumpModule : MonoBehaviour, IPlayerModule
     {
-        [Header("Jump & Gravity")]
-        [SerializeField] private float gravity = -20f;
+        [Header("Jump")]
         [SerializeField] private float jumpHeight = 1.2f;
-        [SerializeField] private float groundedStickForce = -2.0f;
 
         [Header("Feel")]
         [SerializeField] private float coyoteTime = 0.10f;
         [SerializeField] private float jumpBuffer = 0.10f;
 
-        private CharacterMotor _motor;
+        [Header("Ground stick")]
+        [Tooltip("Keeps the RB gently pinned to ground when grounded (prevents micro-bounce).")]
+        [SerializeField] private float groundedStickVelocity = -2.0f;
 
-        private bool _jumpPressedThisFrame;
+        private RigidbodyMotor _motor;
+
         private float _lastGroundedTime = -999f;
         private float _lastJumpPressedTime = -999f;
 
-        private float _verticalVelocity;
         private bool _enabled;
 
         public void SetJumpPressedThisFrame(bool pressed)
         {
-            _jumpPressedThisFrame = pressed;
-            if (pressed) _lastJumpPressedTime = Time.time;
+            if (!pressed) return;
+
+            Debug.Log("JumpModule received jump input");
+            _lastJumpPressedTime = Time.time;
         }
 
         public void ModuleEnable() => _enabled = true;
@@ -37,45 +39,45 @@ namespace _Project.Code.Player.Modules
 
         private void Awake()
         {
-            _motor = GetComponent<CharacterMotor>();
-            if (_motor == null) _motor = gameObject.AddComponent<CharacterMotor>();
+            _motor = GetComponent<RigidbodyMotor>();
         }
 
+        /// <summary>
+        /// Call from FixedUpdate.
+        /// </summary>
         public void Tick(float dt)
         {
             if (!_enabled) return;
 
-            HandleGrounding();
-            HandleJumpAndGravity(dt);
+            Debug.Log("Grounded: " + _motor.IsGrounded);
 
-            _motor.SetVerticalVelocity(_verticalVelocity);
-            _jumpPressedThisFrame = false;
-        }
-
-        private void HandleGrounding()
-        {
             if (_motor.IsGrounded)
-            {
                 _lastGroundedTime = Time.time;
 
-                if (_verticalVelocity < 0f)
-                    _verticalVelocity = groundedStickForce;
-            }
-        }
-
-        private void HandleJumpAndGravity(float dt)
-        {
             bool canCoyote = (Time.time - _lastGroundedTime) <= coyoteTime;
             bool buffered = (Time.time - _lastJumpPressedTime) <= jumpBuffer;
 
+            // Compute jump speed from Physics.gravity (Unity gravity)
+            float g = Mathf.Abs(Physics.gravity.y);
+            float jumpSpeed = Mathf.Sqrt(2f * g * Mathf.Max(0.01f, jumpHeight));
+
             if (buffered && (_motor.IsGrounded || canCoyote))
             {
-                _verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
+                _motor.Jump(jumpSpeed);
+
+                // consume
                 _lastJumpPressedTime = -999f;
                 _lastGroundedTime = -999f;
+                return;
             }
 
-            _verticalVelocity += gravity * dt;
+            // Ground stick: only if grounded and not moving up
+            if (_motor.IsGrounded)
+            {
+                float vy = _motor.GetVerticalVelocity();
+                if (vy <= 0.05f)
+                    _motor.Jump(groundedStickVelocity);
+            }
         }
     }
 }
