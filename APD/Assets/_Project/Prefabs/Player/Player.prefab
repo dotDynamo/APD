@@ -108,6 +108,8 @@ GameObject:
   - component: {fileID: 7745006456953905578}
   - component: {fileID: 1183800635928630750}
   - component: {fileID: 59407709552129605}
+  - component: {fileID: 3979331950452756984}
+  - component: {fileID: 7536615357809942421}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -147,6 +149,7 @@ MonoBehaviour:
   coyoteTime: 0.1
   jumpBuffer: 0.1
   groundedStickVelocity: -2
+  groundStickMaxAngleFromUp: 25
 --- !u!114 &782698803809885569
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -173,6 +176,7 @@ MonoBehaviour:
   brakeAir: 10
   rotationSharpness: 18
   maxDepenetrationVelocity: 12
+  moveSpaceMode: 0
   debugGrounding: 1
   debugMovementPlane: 1
 --- !u!136 &4933033504170716732
@@ -311,12 +315,48 @@ MonoBehaviour:
   alignSharpness: 18
   wallJumpHeight: 1.2
   detachGraceSeconds: 0.15
-  stopClimbWhenGrounded: 0
+  enableLedgeHop: 1
+  ledgeCheckForward: 0.35
+  ledgeCheckDown: 0.85
+  ledgeHopUpSpeed: 3.5
+  ledgeHopForwardSpeed: 2
+  ledgeHopCooldown: 0.25
   cameraTransform: {fileID: 0}
   debugGizmos: 1
   debugLogs: 0
   gizmoNormalLength: 0.5
   gizmoVelocityScale: 0.05
+--- !u!114 &3979331950452756984
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3089628069266091058}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 65927f3836256ccd49b746352c09d421, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::_Project.Code.Player.Modules.HealthModule
+  maxHealth: 100
+  iFrames: 0
+--- !u!114 &7536615357809942421
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3089628069266091058}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bd41b04e4574cc70bf92db133111e94, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::_Project.Code.Player.Modules.FallDamageModule
+  fallThresholdVelocity: 15
+  damageMultiplier: 1
+  targetRenderer: {fileID: 6482095825482968829}
+  flashSeconds: 2
+  damageReceiverOverride: {fileID: 1500527986375054100}
 --- !u!1 &3527451413373891738
 GameObject:
   m_ObjectHideFlags: 0
