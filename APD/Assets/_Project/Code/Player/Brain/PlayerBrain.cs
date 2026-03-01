@@ -11,6 +11,7 @@ namespace _Project.Code.Player.Brain
     [RequireComponent(typeof(RigidbodyMotor))]
     [RequireComponent(typeof(MovementModule))]
     [RequireComponent(typeof(JumpModule))]
+    [RequireComponent(typeof(WallClimbModule))]
     public sealed class PlayerBrain : MonoBehaviour
     {
         [Header("References")]
@@ -18,17 +19,16 @@ namespace _Project.Code.Player.Brain
         [SerializeField] private RigidbodyMotor motor;
         [SerializeField] private MovementModule movementModule;
         [SerializeField] private JumpModule jumpModule;
+        [SerializeField] private WallClimbModule wallClimbModule;
 
         [Header("Camera")]
         [Tooltip("Si no asignas nada, usará Camera.main automáticamente.")]
         [SerializeField] private Transform cameraTransform;
 
-        // input cached
         private Vector2 _move;
         private bool _sprintHeld;
         private bool _jumpPressedThisFrame;
 
-        // Actions
         private InputAction _moveAction;
         private InputAction _sprintAction;
         private InputAction _jumpAction;
@@ -39,6 +39,7 @@ namespace _Project.Code.Player.Brain
             motor = GetComponent<RigidbodyMotor>();
             movementModule = GetComponent<MovementModule>();
             jumpModule = GetComponent<JumpModule>();
+            wallClimbModule = GetComponent<WallClimbModule>();
         }
 
         private void Awake()
@@ -47,6 +48,7 @@ namespace _Project.Code.Player.Brain
             if (motor == null) motor = GetComponent<RigidbodyMotor>();
             if (movementModule == null) movementModule = GetComponent<MovementModule>();
             if (jumpModule == null) jumpModule = GetComponent<JumpModule>();
+            if (wallClimbModule == null) wallClimbModule = GetComponent<WallClimbModule>();
 
             if (!string.IsNullOrEmpty(playerInput.defaultActionMap))
                 playerInput.SwitchCurrentActionMap(playerInput.defaultActionMap);
@@ -58,22 +60,7 @@ namespace _Project.Code.Player.Brain
             _moveAction = playerInput.actions.FindAction("Move", throwIfNotFound: false);
             _sprintAction = playerInput.actions.FindAction("Sprint", throwIfNotFound: false);
             _jumpAction = playerInput.actions.FindAction("Jump", throwIfNotFound: false);
-
-            if (_moveAction == null) Debug.LogError("PlayerBrain: Action 'Move' no encontrada.", this);
-            if (_sprintAction == null) Debug.LogError("PlayerBrain: Action 'Sprint' no encontrada.", this);
-            if (_jumpAction == null) Debug.LogError("PlayerBrain: Action 'Jump' no encontrada.", this);
         }
-
-#if UNITY_EDITOR
-        private void OnValidate()
-        {
-            if (GetComponent<PlayerInput>() == null) gameObject.AddComponent<PlayerInput>();
-            if (GetComponent<Rigidbody>() == null) gameObject.AddComponent<Rigidbody>();
-            if (GetComponent<RigidbodyMotor>() == null) gameObject.AddComponent<RigidbodyMotor>();
-            if (GetComponent<MovementModule>() == null) gameObject.AddComponent<MovementModule>();
-            if (GetComponent<JumpModule>() == null) gameObject.AddComponent<JumpModule>();
-        }
-#endif
 
         private void OnEnable()
         {
@@ -81,8 +68,12 @@ namespace _Project.Code.Player.Brain
                 cameraTransform = Camera.main.transform;
 
             if (cameraTransform != null)
+            {
                 motor.SetCamera(cameraTransform);
+                wallClimbModule.SetCameraTransform(cameraTransform);
+            }
 
+            wallClimbModule.ModuleEnable();
             jumpModule.ModuleEnable();
             movementModule.ModuleEnable();
 
@@ -121,25 +112,30 @@ namespace _Project.Code.Player.Brain
 
             movementModule.ModuleDisable();
             jumpModule.ModuleDisable();
+            wallClimbModule.ModuleDisable();
         }
 
         private void Update()
         {
-            // Only cache input + edge triggers in Update
-            movementModule.SetInput(_move, _sprintHeld);
-            jumpModule.SetJumpPressedThisFrame(_jumpPressedThisFrame);
+            wallClimbModule.SetInput(_move, _sprintHeld, _jumpPressedThisFrame);
 
-            // consume edge
+            movementModule.SetInput(_move, _sprintHeld);
+
+            // JumpModule only if NOT climbing
+            jumpModule.SetJumpPressedThisFrame(!wallClimbModule.IsClimbing && _jumpPressedThisFrame);
+
             _jumpPressedThisFrame = false;
         }
 
         private void FixedUpdate()
         {
-            // Apply movement/jump in FixedUpdate (Rigidbody timebase)
             float dt = Time.fixedDeltaTime;
 
-            // Order: vertical first, then planar (consistent)
-            jumpModule.Tick(dt);
+            wallClimbModule.Tick(dt);
+
+            if (!wallClimbModule.IsClimbing)
+                jumpModule.Tick(dt);
+
             movementModule.Tick(dt);
         }
 
@@ -150,11 +146,5 @@ namespace _Project.Code.Player.Brain
         private void OnSprintCanceled(InputAction.CallbackContext ctx) => _sprintHeld = false;
 
         private void OnJumpPerformed(InputAction.CallbackContext ctx) => _jumpPressedThisFrame = true;
-
-        public void SetCameraTransform(Transform cam)
-        {
-            cameraTransform = cam;
-            motor.SetCamera(cam);
-        }
     }
 }

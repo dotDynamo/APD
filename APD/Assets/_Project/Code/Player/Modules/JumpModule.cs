@@ -16,8 +16,8 @@ namespace _Project.Code.Player.Modules
         [SerializeField] private float jumpBuffer = 0.10f;
 
         [Header("Ground stick")]
-        [Tooltip("Keeps the RB gently pinned to ground when grounded (prevents micro-bounce).")]
         [SerializeField] private float groundedStickVelocity = -2.0f;
+        [SerializeField] private float groundStickMaxAngleFromUp = 25f;
 
         private RigidbodyMotor _motor;
 
@@ -29,8 +29,6 @@ namespace _Project.Code.Player.Modules
         public void SetJumpPressedThisFrame(bool pressed)
         {
             if (!pressed) return;
-
-            Debug.Log("JumpModule received jump input");
             _lastJumpPressedTime = Time.time;
         }
 
@@ -42,14 +40,9 @@ namespace _Project.Code.Player.Modules
             _motor = GetComponent<RigidbodyMotor>();
         }
 
-        /// <summary>
-        /// Call from FixedUpdate.
-        /// </summary>
         public void Tick(float dt)
         {
             if (!_enabled) return;
-
-            Debug.Log("Grounded: " + _motor.IsGrounded);
 
             if (_motor.IsGrounded)
                 _lastGroundedTime = Time.time;
@@ -57,26 +50,27 @@ namespace _Project.Code.Player.Modules
             bool canCoyote = (Time.time - _lastGroundedTime) <= coyoteTime;
             bool buffered = (Time.time - _lastJumpPressedTime) <= jumpBuffer;
 
-            // Compute jump speed from Physics.gravity (Unity gravity)
             float g = Mathf.Abs(Physics.gravity.y);
             float jumpSpeed = Mathf.Sqrt(2f * g * Mathf.Max(0.01f, jumpHeight));
 
             if (buffered && (_motor.IsGrounded || canCoyote))
             {
                 _motor.Jump(jumpSpeed);
-
-                // consume
                 _lastJumpPressedTime = -999f;
                 _lastGroundedTime = -999f;
                 return;
             }
 
-            // Ground stick: only if grounded and not moving up
+            // ground stick only on real ground plane
             if (_motor.IsGrounded)
             {
-                float vy = _motor.GetVerticalVelocity();
-                if (vy <= 0.05f)
-                    _motor.Jump(groundedStickVelocity);
+                float angle = Vector3.Angle(_motor.MovementPlaneNormal, Vector3.up);
+                if (angle <= groundStickMaxAngleFromUp)
+                {
+                    float vy = _motor.GetVerticalVelocity();
+                    if (vy <= 0.05f)
+                        _motor.Jump(groundedStickVelocity);
+                }
             }
         }
     }
