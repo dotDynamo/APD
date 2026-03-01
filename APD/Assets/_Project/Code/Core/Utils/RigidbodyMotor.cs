@@ -6,6 +6,8 @@ namespace _Project.Code.Player.Utils
     [RequireComponent(typeof(Rigidbody))]
     public sealed class RigidbodyMotor : MonoBehaviour
     {
+        public enum MoveSpaceMode { CameraRelative, SurfaceStable }
+
         [Header("References")]
         [SerializeField] private Rigidbody rb;
         [SerializeField] private Transform cameraTransform;
@@ -29,26 +31,38 @@ namespace _Project.Code.Player.Utils
         [Header("Physics Quality")]
         [SerializeField] private float maxDepenetrationVelocity = 12f;
 
+        [Header("Move Space")]
+        [SerializeField] private MoveSpaceMode moveSpaceMode = MoveSpaceMode.CameraRelative;
+
         [Header("Debug")]
         [SerializeField] private bool debugGrounding = true;
+        [SerializeField] private bool debugMovementPlane = true;
 
-        private Vector3 _targetHorizontalVelocity; // world XZ
+        private Vector3 _targetPlanarVelocity;
         private bool _isGrounded;
         public bool IsGrounded => _isGrounded;
 
+        private bool _groundedOverrideActive;
+        private bool _groundedOverrideValue;
+
         private Collider _selfCollider;
 
-        // Rotation target
         private bool _hasDesiredRotation;
         private Quaternion _desiredRotation;
 
-        // Debug state for grounding
         private bool _groundHitMask;
         private bool _groundHitFallback;
         private RaycastHit _groundHitInfo;
 
-        /// <summary>Use RB rotation (prevents jitter vs transform.eulerAngles).</summary>
+        // ✅ Plane-based movement (Mario Galaxy)
+        private Vector3 _movementPlaneNormal = Vector3.up;
+        public Vector3 MovementPlaneNormal => _movementPlaneNormal;
+
+        // ✅ Stable frame when wall-walking
+        private Vector3 _stableForwardOnPlane = Vector3.forward;
+
         public Quaternion CurrentRotation => rb != null ? rb.rotation : transform.rotation;
+        public Transform CameraTransform => cameraTransform;
 
         private void Reset()
         {
@@ -63,10 +77,8 @@ namespace _Project.Code.Player.Utils
             rb.interpolation = RigidbodyInterpolation.Interpolate;
             rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
 
-            // prevent physics from tipping us
             rb.constraints = RigidbodyConstraints.FreezeRotation;
 
-            // Unity 6 uses linearDamping / angularDamping
             rb.linearDamping = 0f;
             rb.angularDamping = 0f;
             rb.sleepThreshold = 0f;
@@ -74,6 +86,9 @@ namespace _Project.Code.Player.Utils
 
             rb.useGravity = true;
             rb.isKinematic = false;
+
+            _movementPlaneNormal = Vector3.up;
+            _targetPlanarVelocity = Vector3.zero;
         }
 
         public void SetCamera(Transform cam) => cameraTransform = cam;
@@ -84,19 +99,55 @@ namespace _Project.Code.Player.Utils
             _hasDesiredRotation = true;
         }
 
+        // ======================================================
+        // ✅ Plane API
+        // ======================================================
+        public void SetMovementPlaneNormal(Vector3 normal)
+        {
+            if (normal.sqrMagnitude < 0.0001f) return;
+            _movementPlaneNormal = normal.normalized;
+        }
+
+        public void ResetMovementPlaneNormal()
+        {
+            _movementPlaneNormal = Vector3.up;
+        }
+
+        // ======================================================
+        // ✅ Grounded Override (for wall-walk feel)
+        // ======================================================
+        public void SetGroundedOverride(bool active, bool value)
+        {
+            _groundedOverrideActive = active;
+            _groundedOverrideValue = value;
+        }
+
+        private bool EffectiveGrounded => _groundedOverrideActive ? _groundedOverrideValue : _isGrounded;
+
+        // ======================================================
+        // ✅ Move Space (camera-relative vs stable on surface)
+        // ======================================================
+        public void SetMoveSpaceMode(MoveSpaceMode mode) => moveSpaceMode = mode;
+
+        public void SetStableForwardOnPlane(Vector3 forwardOnPlane)
+        {
+            forwardOnPlane = Vector3.ProjectOnPlane(forwardOnPlane, _movementPlaneNormal);
+            if (forwardOnPlane.sqrMagnitude < 0.0001f) return;
+            _stableForwardOnPlane = forwardOnPlane.normalized;
+        }
+
         private void FixedUpdate()
         {
             UpdateGrounded();
 
             ApplyRotation(Time.fixedDeltaTime);
-            ApplyHorizontalVelocity(Time.fixedDeltaTime);
+            ApplyPlanarVelocity(Time.fixedDeltaTime);
         }
 
         private void ApplyRotation(float fixedDt)
         {
             if (!_hasDesiredRotation) return;
 
-            // Smooth toward desired rotation
             float t = 1f - Mathf.Exp(-rotationSharpness * fixedDt);
             Quaternion newRot = Quaternion.Slerp(rb.rotation, _desiredRotation, t);
             rb.MoveRotation(newRot);
@@ -119,7 +170,6 @@ namespace _Project.Code.Player.Utils
             _groundHitFallback = false;
             RaycastHit rhFinal = rhMask;
 
-            // If mask misses, try Everything (fallback)
             if (!_groundHitMask)
             {
                 _groundHitFallback = Physics.SphereCast(
@@ -138,20 +188,17 @@ namespace _Project.Code.Player.Utils
 
             bool hit = _groundHitMask || _groundHitFallback;
 
-            // Ignore our own collider if it ever gets hit
             if (hit && _selfCollider != null && rhFinal.collider == _selfCollider)
                 hit = false;
 
             _isGrounded = hit;
             _groundHitInfo = rhFinal;
 
-            // Optional console warning: only when mask misses but fallback hits
             if (debugGrounding && Application.isPlaying && !_groundHitMask && _groundHitFallback)
             {
                 Debug.LogWarning(
                     $"[RigidbodyMotor][Grounding] groundMask MISS, fallback HIT -> " +
-                    $"Hit '{_groundHitInfo.collider.name}' on Layer '{LayerMask.LayerToName(_groundHitInfo.collider.gameObject.layer)}'. " +
-                    $"Fix: put ground on the Ground layer OR include its layer in groundMask.",
+                    $"Hit '{_groundHitInfo.collider.name}' on Layer '{LayerMask.LayerToName(_groundHitInfo.collider.gameObject.layer)}'.",
                     this
                 );
             }
@@ -161,20 +208,30 @@ namespace _Project.Code.Player.Utils
         // API expected by your Modules
         // ======================================================
 
+        /// <summary>
+        /// Camera-relative direction projected onto CURRENT movement plane,
+        /// OR stable surface frame when wall-walking.
+        /// </summary>
         public Vector3 GetCameraRelativeDirection(Vector2 move)
         {
             if (move.sqrMagnitude < 0.0001f) return Vector3.zero;
 
-            Vector3 forward = Vector3.forward;
-            Vector3 right = Vector3.right;
+            Vector3 forward, right;
 
-            if (cameraTransform != null)
+            if (moveSpaceMode == MoveSpaceMode.SurfaceStable)
             {
-                forward = cameraTransform.forward;
-                right = cameraTransform.right;
+                forward = _stableForwardOnPlane;
+                right = Vector3.Cross(_movementPlaneNormal, forward);
+                if (right.sqrMagnitude < 0.0001f) right = Vector3.right;
+                right.Normalize();
+            }
+            else
+            {
+                forward = cameraTransform != null ? cameraTransform.forward : transform.forward;
+                right = cameraTransform != null ? cameraTransform.right : transform.right;
 
-                forward.y = 0f;
-                right.y = 0f;
+                forward = Vector3.ProjectOnPlane(forward, _movementPlaneNormal);
+                right = Vector3.ProjectOnPlane(right, _movementPlaneNormal);
 
                 if (forward.sqrMagnitude > 0.0001f) forward.Normalize();
                 if (right.sqrMagnitude > 0.0001f) right.Normalize();
@@ -184,16 +241,14 @@ namespace _Project.Code.Player.Utils
             return world.sqrMagnitude > 1f ? world.normalized : world;
         }
 
-        public void Move(Vector3 horizontalVelocity, float dt)
+        public void Move(Vector3 desiredVelocity, float dt)
         {
-            _targetHorizontalVelocity = new Vector3(horizontalVelocity.x, 0f, horizontalVelocity.z);
+            _targetPlanarVelocity = Vector3.ProjectOnPlane(desiredVelocity, _movementPlaneNormal);
         }
 
-        public float GetVerticalVelocity()
-        {
-            return GetVelocity().y;
-        }
+        public float GetVerticalVelocity() => GetVelocity().y;
 
+        /// <summary>WORLD Y jump.</summary>
         public void Jump(float jumpSpeed)
         {
             Vector3 v = GetVelocity();
@@ -203,25 +258,27 @@ namespace _Project.Code.Player.Utils
         }
 
         // ======================================================
-        // Movement core
+        // Movement core (plane-based)
         // ======================================================
-
-        private void ApplyHorizontalVelocity(float fixedDt)
+        private void ApplyPlanarVelocity(float fixedDt)
         {
             Vector3 v = GetVelocity();
-            Vector3 planar = new Vector3(v.x, 0f, v.z);
+            Vector3 n = _movementPlaneNormal;
 
-            Vector3 target = new Vector3(_targetHorizontalVelocity.x, 0f, _targetHorizontalVelocity.z);
-            bool hasInput = target.sqrMagnitude > 0.0001f;
+            Vector3 vN = n * Vector3.Dot(v, n);
+            Vector3 vP = v - vN;
 
-            float accel = _isGrounded ? maxAccelGround : maxAccelAir;
-            float brake = _isGrounded ? brakeGround : brakeAir;
+            Vector3 targetP = _targetPlanarVelocity;
+            bool hasInput = targetP.sqrMagnitude > 0.0001f;
 
-            Vector3 newPlanar = hasInput
-                ? Vector3.MoveTowards(planar, target, accel * fixedDt)
-                : Vector3.MoveTowards(planar, Vector3.zero, brake * fixedDt);
+            float accel = EffectiveGrounded ? maxAccelGround : maxAccelAir;
+            float brake = EffectiveGrounded ? brakeGround : brakeAir;
 
-            SetVelocity(new Vector3(newPlanar.x, v.y, newPlanar.z));
+            Vector3 newP = hasInput
+                ? Vector3.MoveTowards(vP, targetP, accel * fixedDt)
+                : Vector3.MoveTowards(vP, Vector3.zero, brake * fixedDt);
+
+            SetVelocity(newP + vN);
         }
 
         private Vector3 GetVelocity()
@@ -245,30 +302,38 @@ namespace _Project.Code.Player.Utils
 #if UNITY_EDITOR
         private void OnDrawGizmosSelected()
         {
-            if (!debugGrounding) return;
             if (rb == null) rb = GetComponent<Rigidbody>();
 
-            Vector3 origin = (rb != null ? rb.position : transform.position) + Vector3.up * groundCheckOffset;
-            Vector3 end = origin + Vector3.down * groundCheckDistance;
-
-            // Green = mask hit, Yellow = fallback hit, Red = no hit
-            if (_groundHitMask) Gizmos.color = Color.green;
-            else if (_groundHitFallback) Gizmos.color = Color.yellow;
-            else Gizmos.color = Color.red;
-
-            // Draw start/end spheres (cast volume) + line
-            Gizmos.DrawWireSphere(origin, groundCheckRadius);
-            Gizmos.DrawWireSphere(end, groundCheckRadius);
-            Gizmos.DrawLine(origin, end);
-
-            // Hit point + normal
-            if (_isGrounded)
+            if (debugGrounding)
             {
-                Gizmos.color = Color.cyan;
-                Gizmos.DrawSphere(_groundHitInfo.point, 0.03f);
+                Vector3 origin = (rb != null ? rb.position : transform.position) + Vector3.up * groundCheckOffset;
+                Vector3 end = origin + Vector3.down * groundCheckDistance;
 
-                Gizmos.color = Color.blue;
-                Gizmos.DrawLine(_groundHitInfo.point, _groundHitInfo.point + _groundHitInfo.normal * 0.35f);
+                if (_groundHitMask) Gizmos.color = Color.green;
+                else if (_groundHitFallback) Gizmos.color = Color.yellow;
+                else Gizmos.color = Color.red;
+
+                Gizmos.DrawWireSphere(origin, groundCheckRadius);
+                Gizmos.DrawWireSphere(end, groundCheckRadius);
+                Gizmos.DrawLine(origin, end);
+
+                if (_isGrounded)
+                {
+                    Gizmos.color = Color.cyan;
+                    Gizmos.DrawSphere(_groundHitInfo.point, 0.03f);
+                    Gizmos.color = Color.blue;
+                    Gizmos.DrawLine(_groundHitInfo.point, _groundHitInfo.point + _groundHitInfo.normal * 0.35f);
+                }
+            }
+
+            if (debugMovementPlane && rb != null)
+            {
+                Gizmos.color = Color.magenta;
+                Vector3 p = rb.position + Vector3.up * 0.2f;
+                Gizmos.DrawLine(p, p + _movementPlaneNormal * 0.7f);
+
+                Gizmos.color = Color.white;
+                Gizmos.DrawLine(p, p + _stableForwardOnPlane * 0.7f);
             }
         }
 #endif

@@ -13,15 +13,12 @@ namespace _Project.Code.Player.Modules
         [SerializeField] private float sprintSpeed = 33f;
 
         [Header("Turning")]
-        [Tooltip("Smaller = snappier rotation")]
-        [SerializeField] private float rotationSmoothTime = 0.08f;
+        [Tooltip("Bigger = snappier rotation")]
+        [SerializeField] private float rotationSharpness = 18f;
 
         private RigidbodyMotor _motor;
-
         private Vector2 _move;
         private bool _sprintHeld;
-
-        private float _turnSmoothVelocity;
         private bool _enabled;
 
         public void SetInput(Vector2 move, bool sprintHeld)
@@ -38,7 +35,6 @@ namespace _Project.Code.Player.Modules
             _motor = GetComponent<RigidbodyMotor>();
         }
 
-        /// <summary>Call from FixedUpdate.</summary>
         public void Tick(float dt)
         {
             if (!_enabled) return;
@@ -53,23 +49,25 @@ namespace _Project.Code.Player.Modules
             }
 
             float speed = _sprintHeld ? sprintSpeed : walkSpeed;
-            Vector3 planarVelocity = moveDir * (speed * magnitude);
+            Vector3 desiredVelocity = moveDir * (speed * magnitude);
 
-            // Use Rigidbody rotation as the "current yaw" to prevent oscillation/shake
-            float currentYaw = _motor.CurrentRotation.eulerAngles.y;
-            float targetYaw = Mathf.Atan2(moveDir.x, moveDir.z) * Mathf.Rad2Deg;
+            Vector3 up = _motor.MovementPlaneNormal;
+            Vector3 forward = Vector3.ProjectOnPlane(moveDir, up);
 
-            float smoothYaw = Mathf.SmoothDampAngle(
-                currentYaw,
-                targetYaw,
-                ref _turnSmoothVelocity,
-                rotationSmoothTime,
-                Mathf.Infinity,
-                dt
-            );
+            if (forward.sqrMagnitude < 0.0001f)
+                forward = Vector3.ProjectOnPlane(_motor.CurrentRotation * Vector3.forward, up);
 
-            _motor.SetDesiredRotation(Quaternion.Euler(0f, smoothYaw, 0f));
-            _motor.Move(planarVelocity, dt);
+            if (forward.sqrMagnitude > 0.0001f)
+            {
+                forward.Normalize();
+                Quaternion target = Quaternion.LookRotation(forward, up);
+
+                float t = 1f - Mathf.Exp(-rotationSharpness * dt);
+                Quaternion blended = Quaternion.Slerp(_motor.CurrentRotation, target, t);
+                _motor.SetDesiredRotation(blended);
+            }
+
+            _motor.Move(desiredVelocity, dt);
         }
     }
 }

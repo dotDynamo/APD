@@ -12,6 +12,9 @@ namespace _Project.Code.Player.Brain
     [RequireComponent(typeof(PlayerBrain))]
     [RequireComponent(typeof(MovementModule))]
     [RequireComponent(typeof(JumpModule))]
+    [RequireComponent(typeof(FallDamageModule))]
+    [RequireComponent(typeof(WallClimbModule))]
+
     public sealed class PlayerBootstrap : MonoBehaviour
     {
     }
