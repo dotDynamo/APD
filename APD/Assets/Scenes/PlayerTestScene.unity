@@ -207,7 +207,7 @@ Transform:
   m_GameObject: {fileID: 63343589}
   serializedVersion: 2
   m_LocalRotation: {x: 0.15212339, y: 0.0000000036159447, z: -5.5654714e-10, w: 0.98836154}
-  m_LocalPosition: {x: 1, y: 5.417246, z: -4.467879}
+  m_LocalPosition: {x: 1, y: 5.0293355, z: -3.237584}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1370,7 +1370,7 @@ Transform:
   m_GameObject: {fileID: 1489392165}
   serializedVersion: 2
   m_LocalRotation: {x: 0.15212339, y: 0.0000000036159449, z: -5.565467e-10, w: 0.98836154}
-  m_LocalPosition: {x: 0, y: 4.463529, z: -4.7685847}
+  m_LocalPosition: {x: 0, y: 4.0756187, z: -3.53829}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1405,13 +1405,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineOrbitalFollow
   TargetOffset: {x: 0, y: 0, z: 0}
   TrackerSettings:
-    BindingMode: 4
+    BindingMode: 5
     PositionDamping: {x: 1, y: 1, z: 1}
     AngularDampingMode: 0
     RotationDamping: {x: 1, y: 1, z: 1}
     QuaternionDamping: 1
   OrbitStyle: 0
-  Radius: 5
+  Radius: 3.71
   Orbits:
     Top:
       Radius: 2
