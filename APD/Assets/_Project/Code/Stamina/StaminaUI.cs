@@ -6,6 +6,7 @@ public class StaminaUI : MonoBehaviour
     [SerializeField] private StaminaComponent staminaComponent;
     [SerializeField] private string textValue;
     [SerializeField] private TMP_Text text;
+    [SerializeField] private Image staminaBar;
 
     void Awake()
     {
@@ -14,9 +15,20 @@ public class StaminaUI : MonoBehaviour
         staminaComponent.OnStaminaFullyRecovered += RecolorFullUI;
     }
 
-     void UpdateUI(float newStaminaValue)
+     void UpdateUI(float newStaminaValue, float maxStamina)
     {
-        text.color = Color.white;
+        float normalizedStamina =  Mathf.Clamp01(newStaminaValue / maxStamina);
+        if (normalizedStamina > 0.45 )
+        {
+            staminaBar.color = Color.green;
+        } else if (normalizedStamina > 0.20)
+        {
+            staminaBar.color = Color.yellow;
+        } else
+        {
+            staminaBar.color = Color.red;
+        }
+        staminaBar.fillAmount = normalizedStamina;
         textValue = newStaminaValue.ToString("00.00");
         text.text = textValue;    
     }
