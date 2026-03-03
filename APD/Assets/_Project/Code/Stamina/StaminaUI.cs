@@ -7,6 +7,7 @@ public class StaminaUI : MonoBehaviour
     [SerializeField] private string textValue;
     [SerializeField] private TMP_Text text;
     [SerializeField] private Image staminaBar;
+    [SerializeField] private Gradient gradient; 
 
     void Awake()
     {
@@ -18,16 +19,7 @@ public class StaminaUI : MonoBehaviour
      void UpdateUI(float newStaminaValue, float maxStamina)
     {
         float normalizedStamina =  Mathf.Clamp01(newStaminaValue / maxStamina);
-        if (normalizedStamina > 0.45 )
-        {
-            staminaBar.color = Color.green;
-        } else if (normalizedStamina > 0.20)
-        {
-            staminaBar.color = Color.yellow;
-        } else
-        {
-            staminaBar.color = Color.red;
-        }
+        staminaBar.color = gradient.Evaluate(normalizedStamina);
         staminaBar.fillAmount = normalizedStamina;
         textValue = newStaminaValue.ToString("00.00");
         text.text = textValue;    
