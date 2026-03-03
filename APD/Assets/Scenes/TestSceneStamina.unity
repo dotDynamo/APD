@@ -173,6 +173,36 @@ MonoBehaviour:
   textValue: 
   text: {fileID: 1198498427}
   staminaBar: {fileID: 771016702}
+  gradient:
+    serializedVersion: 2
+    key0: {r: 1, g: 0, b: 0, a: 1}
+    key1: {r: 0.8196835, g: 0.5656931, b: 0.18143883, a: 1}
+    key2: {r: 0.74547964, g: 0.7186872, b: 0.23076025, a: 0}
+    key3: {r: 0.6888485, g: 0.8354498, b: 0.26840156, a: 0}
+    key4: {r: 0.23851903, g: 0.754717, b: 0.24719591, a: 0}
+    key5: {r: 0, g: 0, b: 0, a: 0}
+    key6: {r: 0, g: 0, b: 0, a: 0}
+    key7: {r: 0, g: 0, b: 0, a: 0}
+    ctime0: 6361
+    ctime1: 15227
+    ctime2: 25058
+    ctime3: 33924
+    ctime4: 47995
+    ctime5: 0
+    ctime6: 0
+    ctime7: 0
+    atime0: 0
+    atime1: 65535
+    atime2: 0
+    atime3: 0
+    atime4: 0
+    atime5: 0
+    atime6: 0
+    atime7: 0
+    m_Mode: 0
+    m_ColorSpace: -1
+    m_NumColorKeys: 5
+    m_NumAlphaKeys: 2
 --- !u!1 &177152057
 GameObject:
   m_ObjectHideFlags: 0
@@ -895,7 +925,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StaminaComponent
   maxStamina: 100
-  regenerationRate: 5
+  regenerationRate: 15
   drainMultiplier: 1
 --- !u!65 &2018215102
 BoxCollider:
@@ -1002,8 +1032,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 92a8fd1953cf64af2bd790648789dd29, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DummyStaminaInput
-  spendAmount: 1
-  multiplier: 1
+  spendAmount: 25
+  multiplier: 10
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
