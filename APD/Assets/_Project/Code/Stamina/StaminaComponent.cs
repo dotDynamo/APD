@@ -15,7 +15,7 @@ public class StaminaComponent : MonoBehaviour, IConsumable
 
     public event Action OnStaminaEmpty;
     public event Action OnStaminaFullyRecovered;
-    public event Action<float> OnStaminaChanged;
+    public event Action<float, float> OnStaminaChanged;
 
     public bool getIsExhausted(){ return isExhausted;}
 
@@ -28,7 +28,7 @@ public class StaminaComponent : MonoBehaviour, IConsumable
     public void Spend(float amount)
     {
         currentStamina -= amount;
-        OnStaminaChanged?.Invoke(currentStamina);
+        OnStaminaChanged?.Invoke(currentStamina, maxStamina);
         checkExhaustion();
     }
 
@@ -50,7 +50,7 @@ public class StaminaComponent : MonoBehaviour, IConsumable
             OnStaminaFullyRecovered?.Invoke();
             return;
         }
-        OnStaminaChanged?.Invoke(currentStamina);
+        OnStaminaChanged?.Invoke(currentStamina, maxStamina);
     }
 
     private void checkExhaustion()
@@ -71,7 +71,7 @@ public class StaminaComponent : MonoBehaviour, IConsumable
     void Awake()
     {
         currentStamina =  maxStamina;
-        OnStaminaChanged?.Invoke(currentStamina);
+        OnStaminaChanged?.Invoke(currentStamina, maxStamina);
     }
 
     void Update()
