@@ -10,21 +10,15 @@ public class Fall : MonoBehaviour
     [SerializeField] LayerMask groundLayer;
     private bool grounded;
     private Rigidbody rigid;
-    private Renderer rend;
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    private Renderer renderer;
 
-private void Awake()
+    private void Awake()
     {
         rigid = GetComponent<Rigidbody>();
-        rend = GetComponent<Renderer>();
-    }
-    void Start()
-    {
-        
+        renderer = GetComponent<Renderer>();
     }
 
-    // Update is called once per frame
-    void Update()
+    private void Update()
     {
         bool previusGrounded = grounded;
         grounded = Physics.CheckSphere(groundCheck.position, groundDistance, groundLayer, QueryTriggerInteraction.Ignore);
@@ -38,23 +32,20 @@ private void Awake()
 
                 Debug.Log("Damage dealt" + damage);
             }
-            
-            
         }
-        
     }
 
-    public void FallStatus(Renderer rend)
+    public void FallStatus(Renderer renderer)
     {
-        StartCoroutine(DamageRed(rend));
+        StartCoroutine(DamageRed(renderer));
         //StartCoroutine(StunCour());
     }
 
-    public IEnumerator DamageRed(Renderer rend){
-    Color original = rend.material.color;
-    rend.material.color = Color.red;
+    public IEnumerator DamageRed(Renderer renderer){
+    Color original = renderer.material.color;
+    renderer.material.color = Color.red;
     yield return new WaitForSeconds(2f);
-    rend.material.color = original;
+    renderer.material.color = original;
     }
 
     /*public IEnumerator StunCour(){

@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd8995abc10254fcda88b750efa5cde2, type: 3}
+  m_Name: SOSquirrel
+  m_EditorClassIdentifier: Assembly-CSharp::SOSquirrel
+  squirrelType: Tank
+  maxStamina: 50
+  climbDrainRate: 12
+  isInvertedDrainRate: 0
+  invertedDrainRate: 0
+  sprintDrainRate: 8
+  dashCost: 20
+  regenRate: 6
