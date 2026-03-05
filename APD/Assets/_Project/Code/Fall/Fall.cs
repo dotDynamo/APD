@@ -28,7 +28,7 @@ public class Fall : MonoBehaviour
             if (rigid.linearVelocity.y < -fallThresholdVelocity)
             {
                 float damage = Mathf.Abs(rigid.linearVelocity.y + fallThresholdVelocity);
-                FallStatus(rend);
+                FallStatus(renderer);
 
                 Debug.Log("Damage dealt" + damage);
             }
